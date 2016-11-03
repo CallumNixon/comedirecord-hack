@@ -14,8 +14,13 @@ class ComediScope;
 #include <QTimerEvent>
 
 #include <Iir.h>
-#include <Fir.h>
+//IMPORT FIR1  HERE
+#include "Fir1.h"
 
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <stdio.h>
 
 #include <comedilib.h>
 #include <fcntl.h>
@@ -236,6 +241,7 @@ public:
      * notch filter
      **/
     Iir::Butterworth::BandStop<IIRORDER>*** iirnotch;
+    Fir1*** firfilter;
 
     /**
      * comma separated?

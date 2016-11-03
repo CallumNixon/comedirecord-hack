@@ -218,8 +218,16 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			assert( iirnotch[devNo][i] != NULL );
 		}
 
-		//Init custom FIR filter here! 
-
+		//Init custom FIR filter here!
+		//Init filter that uses coefficients.dat here
+		firfilter = new Fir1**[nComediDevices];
+		for(int devNo=0;devNo<nComediDevices;devNo++){
+			firfilter[devNo] = new Fir1*[channels_in_use];
+			for(int i=0;i<channels_in_use;i++){
+				unsigned int number_of_taps = 0;
+				firfilter[nComediDevices][i] = new Fir1("coefficients.dat",number_of_taps);
+			}
+		}	//TODO use asserts for error checking
 
 		// raw data buffer for saving the data
 		daqData[devNo] = new lsampl_t[channels_in_use];
@@ -539,6 +547,11 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 						value=iirnotch[n][i]->filter(value);
 					}
 					//DO custom FIR filtering here and remove IIR filtering above
+						//
+
+
+
+
 
 
 					//END
@@ -608,4 +621,92 @@ void ComediScope::clearScreen()
 {
 	eraseFlag = 1;
 	repaint();
+}
+
+Fir1::Fir1(double *coefficients, unsigned number_of_taps) :
+	coefficients(coefficients),
+	// addition of brackets should mean the array is
+	// value-initialised to be all zeros
+	buffer(new double[number_of_taps]()),
+	taps(number_of_taps),
+	offset(0)
+{}
+
+// one coefficient per line
+Fir1::Fir1(const char* coeffFile, unsigned number_of_taps) :
+	offset(0),
+	taps(number_of_taps)
+{
+	buffer = NULL;
+	coefficients = NULL;
+
+	FILE* f=fopen(coeffFile,"rt");
+	if (!f)
+	{
+		fprintf(stderr,"Could not open file with coefficients: %s\n",coeffFile);
+		taps = 0;
+		return;
+	}
+
+	if (taps == 0)
+	{
+		double a;
+		while (fscanf(f,"%lf\n",&a)>0) taps++;
+		rewind(f);
+	}
+
+	assert (taps > 0);
+
+	buffer = new double[taps];
+	coefficients = new double[taps];
+
+	assert( buffer != NULL );
+	assert( coefficients != NULL );
+
+	for(int i=0;i<taps;i++)
+	{
+		if (fscanf(f,"%lf\n",coefficients+i)<1)
+		{
+			fprintf(stderr,"Could not read coefficients.\n");
+			exit(1);
+		}
+	}
+	fclose(f);
+}
+
+
+Fir1::~Fir1()
+{
+  delete[] buffer;
+  delete[] coefficients;
+}
+
+double Fir1::filter(double input)
+{
+	double *coeff     = coefficients;
+	double *coeff_end = coefficients + taps;
+
+	double *buf_val = buffer + offset;
+
+	*buf_val = input;
+	double output_ = 0;
+
+	while(buf_val >= buffer)
+		output_ += *buf_val-- * *coeff++;
+
+	buf_val = buffer + taps-1;
+
+	while(coeff < coeff_end)
+		output_ += *buf_val-- * *coeff++;
+
+	if(++offset >= taps)
+		offset = 0;
+
+	return output_;
+}
+
+void Fir1::reset()
+{
+	memset(buffer, 0, sizeof(double)*taps);
+	offset = 0;
 }
