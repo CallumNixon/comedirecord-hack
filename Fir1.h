@@ -53,7 +53,7 @@ public:
 
 	// returns the number of taps
 	unsigned getTaps() {return taps;};
-	
+
 private:
 	double        *coefficients;
 	double        *buffer;

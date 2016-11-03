@@ -32,6 +32,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 	)
     : QWidget( comediRecordTmp ) {
 
+
+	printf("starting up things");
 	channels_in_use = channels;
 
 	tb_init=1;
@@ -218,17 +220,19 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			assert( iirnotch[devNo][i] != NULL );
 		}
 
+		printf("going to initialise FIR Filter\n");
 		//Init custom FIR filter here!
 		//Init filter that uses coefficients.dat here
 		firfilter = new Fir1**[nComediDevices];
 		for(int devNo=0;devNo<nComediDevices;devNo++){
 			firfilter[devNo] = new Fir1*[channels_in_use];
 			for(int i=0;i<channels_in_use;i++){
-				unsigned int number_of_taps = 100;
+				unsigned int number_of_taps = 1000;
 				firfilter[nComediDevices][i] = new Fir1("coefficients.dat",number_of_taps); //TODO update coefficients
 			}
 		}	//TODO use asserts for error checking
 
+		printf("initialised FIR woop!\n");
 		// raw data buffer for saving the data
 		daqData[devNo] = new lsampl_t[channels_in_use];
 		assert( daqData[devNo] != NULL );
@@ -543,12 +547,15 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					value = comediRecord->hp[n][i]->filter(value);
 					value = comediRecord->lp[n][i]->filter(value);
 
+
 					//use FIR filter
-					value = firfilter[n][i]->filter(value);
 
 					// remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
-						value=iirnotch[n][i]->filter(value);
+						//value=iirnotch[n][i]->filter(value);
+						printf("Using FIR FILTER!\n");
+						double test = value;
+						value = firfilter[n][i]->filter(test);
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
@@ -557,12 +564,6 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					adAvgBuffer[n][i] = adAvgBuffer[n][i] + value;
 				}
 				//DO custom FIR filtering here and remove IIR filtering above
-
-
-
-
-
-
 
 				//END
 
@@ -677,37 +678,48 @@ Fir1::Fir1(const char* coeffFile, unsigned number_of_taps) :
 		}
 	}
 	fclose(f);
+	printf("Read in taps of size: ");
+	printf ("%d\n", taps);
 }
 
 
 Fir1::~Fir1()
 {
-  delete[] buffer;
-  delete[] coefficients;
+  double buffer[1000];
+  double coefficients[1000];
 }
 
 double Fir1::filter(double input)
 {
+	//Implementing custom simple FIR filter
+
+	//Shift values up
+	for (int i = 1000; i > 1; i--){
+		buffer[i] = buffer[i-1];
+	}
+	// insert desired value at desired position
+	buffer[0] = input;
+	double sum;
+	for (int i = 0; i <1000 ; i++){
+		sum = buffer[i] * coefficients[i];
+	}
+	return sum;
+	/*
 	double *coeff     = coefficients;
 	double *coeff_end = coefficients + taps;
-
 	double *buf_val = buffer + offset;
-
 	*buf_val = input;
 	double output_ = 0;
-
 	while(buf_val >= buffer)
 		output_ += *buf_val-- * *coeff++;
 
 	buf_val = buffer + taps-1;
-
 	while(coeff < coeff_end)
 		output_ += *buf_val-- * *coeff++;
 
 	if(++offset >= taps)
 		offset = 0;
-
-	return output_;
+	return output_;*/
 }
 
 void Fir1::reset()

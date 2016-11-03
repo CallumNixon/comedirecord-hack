@@ -1,5 +1,5 @@
 /********************************************************************
- * comedirecord.cpp 
+ * comedirecord.cpp
  * License: GNU, GPL
  * (c) 2004-2016, Bernd Porr
  * No Warranty
@@ -54,7 +54,7 @@ protected:
 };
 
 
-ComediRecord::ComediRecord( QWidget *parent, 
+ComediRecord::ComediRecord( QWidget *parent,
 			    int ignoreSettings,
 			    int nchannels,
 			    float notchF,
@@ -65,7 +65,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 			    const char* defaultTextStringForMissingExtData,
 			    const char* filename,
 			    int csv,
-			    int fftdev, 
+			    int fftdev,
 			    int fftch,
 			    int fftmaxf,
 			    float lpFreq,
@@ -81,7 +81,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 				    first_dev_no,
 				    requrested_sampling_rate,
 				    defaultTextStringForMissingExtData,
-				    fftdev, 
+				    fftdev,
 				    fftch,
 				    fftmaxf
 		);
@@ -151,11 +151,11 @@ ComediRecord::ComediRecord( QWidget *parent,
 	subDClabel=new QLabel**[n_devs];
 	hpLabel=new QLabel**[n_devs];
 	lpLabel=new QLabel**[n_devs];
-	
+
 	// to the get the stuff a bit closer together
 	char styleSheet[] = "padding:0px;margin:0px;border:0px;";
 
-	QSettings settings(QSettings::IniFormat, 
+	QSettings settings(QSettings::IniFormat,
 			   QSettings::UserScope,
 			   USBDUX_STRING,
 			   PROGRAM_NAME);
@@ -215,7 +215,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 				(voltageMetrics.width(tmpVolt),
 				 (int)(voltageMetrics.height()*1.1));
 			voltageTextEdit[n][i]->
-				setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff ); 
+				setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
 			voltageTextEdit[n][i]->setReadOnly(true);
 			voltageTextEdit[n][i]->setFont(voltageFont);
 			// voltageTextEdit[i]->setLineWidth(1);
@@ -342,7 +342,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 
 	char tbStyle[]="background-color: white;border-style:outset;border-width: 2px;border-color: black;font: bold 20px;padding: 4px;";
 	tbIncPushButton->setStyleSheet(tbStyle);
-	tbIncPushButton->setMaximumSize ( tbMetrics.width(" + ") ,  
+	tbIncPushButton->setMaximumSize ( tbMetrics.width(" + ") ,
 					  tbMetrics.height() );
 	tbIncPushButton->setFont(tbFont);
 	tbgrp->connect(tbIncPushButton, SIGNAL( clicked() ),
@@ -351,9 +351,9 @@ ComediRecord::ComediRecord( QWidget *parent,
 
 	tbDecPushButton = new QPushButton( "-" );
 	tbDecPushButton->setStyleSheet(tbStyle);
-	tbDecPushButton->setMaximumSize ( tbMetrics.width(" + ") ,  
+	tbDecPushButton->setMaximumSize ( tbMetrics.width(" + ") ,
 					  tbMetrics.height() );
-	tbDecPushButton->setFont(tbFont);	
+	tbDecPushButton->setFont(tbFont);
 	tbgrp->connect(tbDecPushButton, SIGNAL( clicked() ),
 		       this, SLOT( decTbEvent() ) );
 	tbLayout->addWidget(tbDecPushButton);
@@ -369,9 +369,9 @@ ComediRecord::ComediRecord( QWidget *parent,
 
 	tbResetPushButton = new QPushButton( "clear" );
 	tbResetPushButton->setStyleSheet("background-color: white;border-style:outset;border-width: 2px;border-color: black;font: bold 10px;padding: 4px;");
-	tbResetPushButton->setMaximumSize ( tbMetrics.width("restart ") ,  
+	tbResetPushButton->setMaximumSize ( tbMetrics.width("restart ") ,
 					  tbMetrics.height() );
-	tbResetPushButton->setFont(tbFont);	
+	tbResetPushButton->setFont(tbFont);
 	tbgrp->connect(tbResetPushButton, SIGNAL( clicked() ),
 		       this, SLOT( resetTbEvent() ) );
 	tbLayout->addWidget(tbResetPushButton);
@@ -422,7 +422,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 }
 
 ComediRecord::~ComediRecord() {
-	QSettings settings(QSettings::IniFormat, 
+	QSettings settings(QSettings::IniFormat,
 			   QSettings::UserScope,
 			   USBDUX_STRING,
 			   PROGRAM_NAME);
@@ -434,7 +434,7 @@ ComediRecord::~ComediRecord() {
 		for(int i=0;i<channels;i++) {
 			char tmp[128];
 			sprintf(tmp,CHSETTING_FORMAT,n,i);
-			settings.setValue(tmp, 
+			settings.setValue(tmp,
 					  channel[n][i] -> getChannel() );
 		}
 	}
@@ -503,13 +503,13 @@ void ComediRecord::enterFileName() {
 }
 
 // callback
-void ComediRecord::recstartstop(int) 
+void ComediRecord::recstartstop(int)
 {
-  if (recPushButton->checkState()==Qt::Checked) 
+  if (recPushButton->checkState()==Qt::Checked)
     {
       comediScope->startRec();
-    } 
-  else 
+    }
+  else
     {
       comediScope->stopRec();
       // to force the user to enter a new filename
@@ -575,7 +575,7 @@ void ComediRecord::changeTB() {
 	} else {
 		tb_us = (tb_us / 1000000) * 1000000;
 		s.sprintf( "%d sec", tb_us/1000000);
-	}		
+	}
 	tbInfoTextEdit->setText(s);
 	comediScope->setTB(tb_us);
 }
@@ -587,6 +587,7 @@ void ComediRecord::resetTbEvent() {
 
 int main( int argc, char **argv )
 {
+	printf("comedirecord started up! \n");
 	int c;
 	int num_of_channels = 0;
 	int num_of_devices = 16;
@@ -604,7 +605,7 @@ int main( int argc, char **argv )
 	int ignoreSettings = 0;
 	const char* defaultTextStringForMissingExtData = NULL;
 
-	QSettings settings(QSettings::IniFormat, 
+	QSettings settings(QSettings::IniFormat,
 			   QSettings::UserScope,
 			   USBDUX_STRING,
 			   PROGRAM_NAME);
@@ -612,7 +613,7 @@ int main( int argc, char **argv )
 
 
 	for(int i = 0;i<argc;i++) {
-		if (strstr(argv[i],"-i")) ignoreSettings = 1;	
+		if (strstr(argv[i],"-i")) ignoreSettings = 1;
 	}
 
 	if (!ignoreSettings) {
@@ -627,7 +628,7 @@ int main( int argc, char **argv )
 		csv = settings.value("csv",0).toInt();
 		settings.endGroup();
 	}
-	
+
 	QApplication a( argc, argv );		// create application object
 
 	while (-1 != (c = getopt(argc, argv, "a:b:x:l:t:r:d:p:f:c:n:hvi"))) {
