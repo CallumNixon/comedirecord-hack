@@ -224,8 +224,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		for(int devNo=0;devNo<nComediDevices;devNo++){
 			firfilter[devNo] = new Fir1*[channels_in_use];
 			for(int i=0;i<channels_in_use;i++){
-				unsigned int number_of_taps = 0;
-				firfilter[nComediDevices][i] = new Fir1("coefficients.dat",number_of_taps);
+				unsigned int number_of_taps = 100;
+				firfilter[nComediDevices][i] = new Fir1("coefficients.dat",number_of_taps); //TODO update coefficients
 			}
 		}	//TODO use asserts for error checking
 
@@ -542,25 +542,30 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					value = comediRecord->dcSub[n][i]->filter(value);
 					value = comediRecord->hp[n][i]->filter(value);
 					value = comediRecord->lp[n][i]->filter(value);
+
+					//use FIR filter
+					value = firfilter[n][i]->filter(value);
+
 					// remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
 						value=iirnotch[n][i]->filter(value);
 					}
-					//DO custom FIR filtering here and remove IIR filtering above
-						//
-
-
-
-
-
-
-					//END
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
 						comediRecord->fftscope->append(value);
 					// average response if TB is slower than sampling rate
 					adAvgBuffer[n][i] = adAvgBuffer[n][i] + value;
 				}
+				//DO custom FIR filtering here and remove IIR filtering above
+
+
+
+
+
+
+
+				//END
+
 			}
 		}
 
