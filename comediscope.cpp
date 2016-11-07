@@ -17,8 +17,64 @@
 #include <comedilib.h>
 #include <fcntl.h>
 
-
 #include "comediscope.h"
+
+enum {num_of_taps = 1000};
+double coefficients[num_of_taps];
+
+void initFIR(){
+	int taps = 0;
+	double a;
+
+	FILE* f=fopen("coefficients.dat","rt");
+	if (!f)
+	{
+		fprintf(stderr,"Could not open file with coefficients.\n");
+		return;
+	}
+
+	while (fscanf(f,"%lf\n",&a)>0) taps++;
+	rewind(f);
+
+	if (taps != num_of_taps){
+		printf("taps do not equal constant number of taps!");
+	}
+
+	assert( coefficients != NULL );
+
+	for(int i=0;i<taps;i++)
+	{
+		if (fscanf(f,"%lf\n",coefficients+i)<1)
+		{
+			fprintf(stderr,"Could not read coefficients.\n");
+			exit(1);
+		}
+	}
+	fclose(f);
+	printf("Read in taps of size: ");
+	printf ("%d\n", taps);
+}
+
+float filter(float input, float buffer[])
+{
+	//Implementing custom simple FIR filter
+	if (buffer == NULL){
+		printf("buffer was null\n");
+	}
+	assert(buffer != NULL);
+	for (int i = num_of_taps - 1; i > 0; i--){
+		buffer[i] = buffer[i-1];
+		//printf("%d\n", i);
+	}
+	//- insert desired value at desired position
+	buffer[0] = input;
+	printf("buffer 22-26: %f, %f, %f, %f, %f\n", buffer[22],buffer[23],buffer[24],buffer[25],buffer[26]);
+  float sum;
+	for (int i = 0; i <1000 ; i++){
+		sum = buffer[i] * coefficients[i];
+	}
+	return sum;
+}
 
 ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			  int channels,
@@ -32,8 +88,6 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 	)
     : QWidget( comediRecordTmp ) {
 
-
-	printf("starting up things");
 	channels_in_use = channels;
 
 	tb_init=1;
@@ -220,19 +274,24 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			assert( iirnotch[devNo][i] != NULL );
 		}
 
-		printf("going to initialise FIR Filter\n");
-		//Init custom FIR filter here!
-		//Init filter that uses coefficients.dat here
-		firfilter = new Fir1**[nComediDevices];
+		printf("Initialising FIR Filter\n");
+		initFIR();
+		printf("coefs initiated\n");
+		firbuffer = new float**[nComediDevices];
 		for(int devNo=0;devNo<nComediDevices;devNo++){
-			firfilter[devNo] = new Fir1*[channels_in_use];
+			firbuffer[devNo] = new float*[channels_in_use];
 			for(int i=0;i<channels_in_use;i++){
-				unsigned int number_of_taps = 1000;
-				firfilter[nComediDevices][i] = new Fir1("coefficients.dat",number_of_taps); //TODO update coefficients
-			}
-		}	//TODO use asserts for error checking
+				firbuffer[devNo][i] = new float[num_of_taps];
+				for (int z=0; z<num_of_taps; z++){
+					firbuffer[devNo][i][z] = 0.0;
+				}
 
-		printf("initialised FIR woop!\n");
+				//firbuffer[devNo][i] = {0};
+			}
+		}
+		//TODO use asserts for error checking */
+		printf("initialised FIR!\n");
+
 		// raw data buffer for saving the data
 		daqData[devNo] = new lsampl_t[channels_in_use];
 		assert( daqData[devNo] != NULL );
@@ -251,7 +310,6 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		 SLOT(updateTime()) );
 }
 
-
 void ComediScope::startDAQ() {
 	for(int devNo=0;devNo<nComediDevices;devNo++) {
 		/* start the command */
@@ -265,13 +323,11 @@ void ComediScope::startDAQ() {
 	counter->start( 500 );
 }
 
-
 ComediScope::~ComediScope() {
 	if (rec_file) {
 		fclose(rec_file);
 	}
 }
-
 
 void ComediScope::setNotchFrequency(float f) {
 	if (f>sampling_rate) {
@@ -292,8 +348,6 @@ void ComediScope::setNotchFrequency(float f) {
 		notchFrequency = f;
 	}
 }
-
-
 
 void ComediScope::updateTime() {
 	QString s;
@@ -326,7 +380,6 @@ void ComediScope::updateTime() {
 	}
 }
 
-
 void ComediScope::setFilename(QString name,int csv) {
 	(*rec_filename)=name;
 	recorded=0;
@@ -336,7 +389,6 @@ void ComediScope::setFilename(QString name,int csv) {
 		separator=' ';
 	}
 }
-
 
 void ComediScope::writeFile() {
 	if (!rec_file) return;
@@ -401,7 +453,6 @@ void ComediScope::startRec() {
 	}
 }
 
-
 void ComediScope::stopRec() {
 	if (rec_file) {
 		fclose(rec_file);
@@ -414,8 +465,6 @@ void ComediScope::stopRec() {
 	if (rec_filename) delete rec_filename;
 	rec_filename = new QString();
 }
-
-
 
 void ComediScope::paintData(float** buffer) {
 	QPainter paint( this );
@@ -485,14 +534,11 @@ void ComediScope::paintData(float** buffer) {
 	}
 }
 
-
-
 //
 // Handles paint events for the ComediScope widget.
 // When the paint-event is triggered the averaging is done, the data is
 // displayed and saved to disk.
 //
-
 void ComediScope::paintEvent( QPaintEvent * ) {
         int ret;
 	while (1) {
@@ -547,15 +593,12 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					value = comediRecord->hp[n][i]->filter(value);
 					value = comediRecord->lp[n][i]->filter(value);
 
-
 					//use FIR filter
-
 					// remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
-						//value=iirnotch[n][i]->filter(value);
-						printf("Using FIR FILTER!\n");
-						double test = value;
-						value = firfilter[n][i]->filter(test);
+						printf("Value going in: %f\n",value);
+						value = filter(value, firbuffer[n][i]);
+						printf("Value coming out: %f\n", value);
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
@@ -563,10 +606,6 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					// average response if TB is slower than sampling rate
 					adAvgBuffer[n][i] = adAvgBuffer[n][i] + value;
 				}
-				//DO custom FIR filtering here and remove IIR filtering above
-
-				//END
-
 			}
 		}
 
@@ -614,116 +653,14 @@ void ComediScope::setTB(int us) {
 //
 // Handles timer events for the ComediScope widget.
 //
-
-void ComediScope::timerEvent( QTimerEvent * )
-{
+void ComediScope::timerEvent( QTimerEvent * ) {
 	if (ext_data_receive) {
 		ext_data_receive->readSocket();
 	}
 	repaint();
 }
 
-void ComediScope::clearScreen()
-{
+void ComediScope::clearScreen() {
 	eraseFlag = 1;
 	repaint();
-}
-
-Fir1::Fir1(double *coefficients, unsigned number_of_taps) :
-	coefficients(coefficients),
-	// addition of brackets should mean the array is
-	// value-initialised to be all zeros
-	buffer(new double[number_of_taps]()),
-	taps(number_of_taps),
-	offset(0)
-{}
-
-// one coefficient per line
-Fir1::Fir1(const char* coeffFile, unsigned number_of_taps) :
-	offset(0),
-	taps(number_of_taps)
-{
-	buffer = NULL;
-	coefficients = NULL;
-
-	FILE* f=fopen(coeffFile,"rt");
-	if (!f)
-	{
-		fprintf(stderr,"Could not open file with coefficients: %s\n",coeffFile);
-		taps = 0;
-		return;
-	}
-
-	if (taps == 0)
-	{
-		double a;
-		while (fscanf(f,"%lf\n",&a)>0) taps++;
-		rewind(f);
-	}
-
-	assert (taps > 0);
-
-	buffer = new double[taps];
-	coefficients = new double[taps];
-
-	assert( buffer != NULL );
-	assert( coefficients != NULL );
-
-	for(int i=0;i<taps;i++)
-	{
-		if (fscanf(f,"%lf\n",coefficients+i)<1)
-		{
-			fprintf(stderr,"Could not read coefficients.\n");
-			exit(1);
-		}
-	}
-	fclose(f);
-	printf("Read in taps of size: ");
-	printf ("%d\n", taps);
-}
-
-
-Fir1::~Fir1()
-{
-  double buffer[1000];
-  double coefficients[1000];
-}
-
-double Fir1::filter(double input)
-{
-	//Implementing custom simple FIR filter
-
-	//Shift values up
-	for (int i = 1000; i > 1; i--){
-		buffer[i] = buffer[i-1];
-	}
-	// insert desired value at desired position
-	buffer[0] = input;
-	double sum;
-	for (int i = 0; i <1000 ; i++){
-		sum = buffer[i] * coefficients[i];
-	}
-	return sum;
-	/*
-	double *coeff     = coefficients;
-	double *coeff_end = coefficients + taps;
-	double *buf_val = buffer + offset;
-	*buf_val = input;
-	double output_ = 0;
-	while(buf_val >= buffer)
-		output_ += *buf_val-- * *coeff++;
-
-	buf_val = buffer + taps-1;
-	while(coeff < coeff_end)
-		output_ += *buf_val-- * *coeff++;
-
-	if(++offset >= taps)
-		offset = 0;
-	return output_;*/
-}
-
-void Fir1::reset()
-{
-	memset(buffer, 0, sizeof(double)*taps);
-	offset = 0;
 }
