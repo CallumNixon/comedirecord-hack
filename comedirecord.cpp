@@ -279,7 +279,7 @@ ComediRecord::ComediRecord( QWidget *parent,
 	notchGroupBox->setStyleSheet(styleSheet);
 	QHBoxLayout *notchLayout = new QHBoxLayout();
 	char tmp[128];
-	sprintf(tmp,"%2.0fHz notch",notchF);
+	sprintf(tmp,"Custom FIR Filter");
 	filterCheckbox=new QCheckBox( tmp );
 	filterCheckbox->setChecked( false );
 	notchLayout->addWidget(filterCheckbox);

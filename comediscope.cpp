@@ -20,7 +20,8 @@
 #include "comediscope.h"
 
 enum {num_of_taps = 1000};
-double coefficients[num_of_taps];
+double fir1_coefficients[num_of_taps];	//coefficients for 50hz notch and DC filter
+double fir2_coefficients[num_of_taps];	//coefficients for matched FIR filter
 
 void initFIR(){
 	int taps = 0;
@@ -40,19 +41,18 @@ void initFIR(){
 		printf("taps do not equal constant number of taps!");
 	}
 
-	assert( coefficients != NULL );
+	assert( fir1_coefficients != NULL );
 
 	for(int i=0;i<taps;i++)
 	{
-		if (fscanf(f,"%lf\n",coefficients+i)<1)
+		if (fscanf(f,"%lf\n",fir1_coefficients+i)<1)
 		{
 			fprintf(stderr,"Could not read coefficients.\n");
 			exit(1);
 		}
 	}
 	fclose(f);
-	printf("Read in taps of size: ");
-	printf ("%d\n", taps);
+	printf("Read in taps of size: %d\n", taps);
 }
 
 float filter(float input, float buffer[])
@@ -68,10 +68,10 @@ float filter(float input, float buffer[])
 	}
 	//- insert desired value at desired position
 	buffer[0] = input;
-	printf("buffer 22-26: %f, %f, %f, %f, %f\n", buffer[22],buffer[23],buffer[24],buffer[25],buffer[26]);
+	//printf("buffer 22-26: %f, %f, %f, %f, %f\n", buffer[22],buffer[23],buffer[24],buffer[25],buffer[26]);
   float sum;
 	for (int i = 0; i <1000 ; i++){
-		sum = buffer[i] * coefficients[i];
+		sum = buffer[i] * fir1_coefficients[i];
 	}
 	return sum;
 }
@@ -596,9 +596,11 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					//use FIR filter
 					// remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
-						printf("Value going in: %f\n",value);
+						if (i == 1){
+						printf("Value going in: %f on channel %d on device %d \n",value, i, n);
 						value = filter(value, firbuffer[n][i]);
 						printf("Value coming out: %f\n", value);
+						}
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
