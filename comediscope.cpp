@@ -55,7 +55,7 @@ void initFIR(){
 	printf("Read in taps of size: %d\n", taps);
 }
 
-float filter(float input, float buffer[])
+float filter(float input, float buffer[], double coefficients[])
 {
 	//Simple FIR filter
 	if (buffer == NULL){
@@ -69,7 +69,7 @@ float filter(float input, float buffer[])
 	buffer[0] = input;
   float sum = 0;
 	for (int i = 0; i <1000 ; i++){
-		sum = sum + (buffer[i] * fir1_coefficients[i]);
+		sum = sum + (buffer[i] * coefficients[i]);
 	}
 	return sum;
 }
@@ -589,12 +589,15 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					value = comediRecord->hp[n][i]->filter(value);
 					value = comediRecord->lp[n][i]->filter(value);
 
-					//use FIR filter
-					// remove 50Hz
+					//use FIR filter to remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
 						//printf("Value going in: %f on channel %d on device %d \n",value, i, n);
-						value = filter(value, firbuffer[n][i]);
+						value = filter(value, firbuffer[n][i], fir1_coefficients);
 						//printf("Value coming out: %f\n", value);
+					}
+
+					if(comediRecord->matchedFilterCheckbox->checkState()==Qt::Checked){
+						//To be implemented
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))

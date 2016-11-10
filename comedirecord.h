@@ -12,7 +12,7 @@ class ComediRecord;
 #include <QApplication>
 #include <QPushButton>
 #include <QCheckBox>
-#include <QLayout> 
+#include <QLayout>
 #include <QTextEdit>
 #include <QGroupBox>
 #include <QLabel>
@@ -39,7 +39,7 @@ public:
  **/
 	ComediRecord( QWidget *parent,
 		      int ignoreSettings = 0,
-		      int channels = 1, 
+		      int channels = 1,
 		      float notch = 50.0,
 		      int port = 0,
 		      int num_of_devices = 1,
@@ -54,12 +54,12 @@ public:
 		      float lpFreq = 10,
 		      float hpFreq = 1
 		);
-	
+
 	/**
 	 * Destructor
 	 **/
 	~ComediRecord();
-	
+
 public:
 /**
  * Sets the filename for the data-file
@@ -89,9 +89,10 @@ public:
     QLabel*** lpLabel;
 
     /**
-     * Notch filter on?
+     * FIR or matched filter on?
      **/
     QCheckBox* filterCheckbox;
+    QCheckBox* matchedFilterCheckbox;
 
 public:
     /**
@@ -189,13 +190,13 @@ private slots:
 /**
  * Reset screen
  **/
-    void resetTbEvent(); 
+    void resetTbEvent();
 
 /**
  * Button to decrease the time-base has been pressed
  **/
     void decTbEvent();
-    
+
     /**
      * Enter a new filename
      **/

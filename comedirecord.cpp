@@ -279,10 +279,13 @@ ComediRecord::ComediRecord( QWidget *parent,
 	notchGroupBox->setStyleSheet(styleSheet);
 	QHBoxLayout *notchLayout = new QHBoxLayout();
 	char tmp[128];
-	sprintf(tmp,"Custom FIR Filter");
+	sprintf(tmp,"Custom FIR Filter\n");
 	filterCheckbox=new QCheckBox( tmp );
 	filterCheckbox->setChecked( false );
 	notchLayout->addWidget(filterCheckbox);
+	matchedFilterCheckbox = new QCheckBox("Apply matched filter\n");
+	matchedFilterCheckbox->setChecked( false );
+	notchLayout->addWidget(matchedFilterCheckbox);
 	commentTextEdit=new QCommentTextEdit();
 	QFont commentFont("Courier",10);
 	QFontMetrics commentMetrics(commentFont);
