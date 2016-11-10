@@ -57,21 +57,19 @@ void initFIR(){
 
 float filter(float input, float buffer[])
 {
-	//Implementing custom simple FIR filter
+	//Simple FIR filter
 	if (buffer == NULL){
 		printf("buffer was null\n");
 	}
 	assert(buffer != NULL);
 	for (int i = num_of_taps - 1; i > 0; i--){
 		buffer[i] = buffer[i-1];
-		//printf("%d\n", i);
 	}
 	//- insert desired value at desired position
 	buffer[0] = input;
-	//printf("buffer 22-26: %f, %f, %f, %f, %f\n", buffer[22],buffer[23],buffer[24],buffer[25],buffer[26]);
-  float sum;
+  float sum = 0;
 	for (int i = 0; i <1000 ; i++){
-		sum = buffer[i] * fir1_coefficients[i];
+		sum = sum + (buffer[i] * fir1_coefficients[i]);
 	}
 	return sum;
 }
@@ -285,11 +283,9 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 				for (int z=0; z<num_of_taps; z++){
 					firbuffer[devNo][i][z] = 0.0;
 				}
-
-				//firbuffer[devNo][i] = {0};
+				assert(firbuffer[devNo][i] != NULL);
 			}
 		}
-		//TODO use asserts for error checking */
 		printf("initialised FIR!\n");
 
 		// raw data buffer for saving the data
@@ -596,11 +592,9 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					//use FIR filter
 					// remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
-						if (i == 1){
-						printf("Value going in: %f on channel %d on device %d \n",value, i, n);
+						//printf("Value going in: %f on channel %d on device %d \n",value, i, n);
 						value = filter(value, firbuffer[n][i]);
-						printf("Value coming out: %f\n", value);
-						}
+						//printf("Value coming out: %f\n", value);
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
