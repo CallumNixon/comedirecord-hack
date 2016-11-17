@@ -241,7 +241,7 @@ public:
     Iir::Butterworth::BandStop<IIRORDER>*** iirnotch;
 
     float*** firbuffer;
-
+    float*** matchedbuffer;
     /**
      * comma separated?
      **/

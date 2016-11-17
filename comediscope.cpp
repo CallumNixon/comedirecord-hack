@@ -19,15 +19,15 @@
 
 #include "comediscope.h"
 
-enum {num_of_taps = 1000};
-double fir1_coefficients[num_of_taps];	//coefficients for 50hz notch and DC filter
-double fir2_coefficients[num_of_taps];	//coefficients for matched FIR filter
+enum {num_of_taps = 2000};
+double fir1_coefficients[2000];	//coefficients for 50hz notch and DC filter
+double fir2_coefficients[6000];	//coefficients for matched FIR filter
 
-void initFIR(){
+void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	int taps = 0;
 	double a;
 
-	FILE* f=fopen("coefficients.dat","rt");
+	FILE* f=fopen(filename,"rt");
 	if (!f)
 	{
 		fprintf(stderr,"Could not open file with coefficients.\n");
@@ -41,11 +41,11 @@ void initFIR(){
 		printf("taps do not equal constant number of taps!");
 	}
 
-	assert( fir1_coefficients != NULL );
+	assert( coeffs != NULL );
 
 	for(int i=0;i<taps;i++)
 	{
-		if (fscanf(f,"%lf\n",fir1_coefficients+i)<1)
+		if (fscanf(f,"%lf\n",coeffs+i)<1)
 		{
 			fprintf(stderr,"Could not read coefficients.\n");
 			exit(1);
@@ -273,7 +273,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		}
 
 		printf("Initialising FIR Filter\n");
-		initFIR();
+		initFIR(2000,fir1_coefficients,"notchcoeffs.dat");
+		initFIR(6000,fir2_coefficients,"matchedcoeffs.dat");
 		printf("coefs initiated\n");
 		firbuffer = new float**[nComediDevices];
 		for(int devNo=0;devNo<nComediDevices;devNo++){
@@ -287,6 +288,19 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			}
 		}
 		printf("initialised FIR!\n");
+
+		matchedbuffer = new float**[nComediDevices];
+		for(int devNo=0;devNo<nComediDevices;devNo++){
+			matchedbuffer[devNo] = new float*[channels_in_use];
+			for(int i=0;i<channels_in_use;i++){
+				matchedbuffer[devNo][i] = new float[num_of_taps];
+				for (int z=0; z<num_of_taps; z++){
+					matchedbuffer[devNo][i][z] = 0.0;
+				}
+				assert(matchedbuffer[devNo][i] != NULL);
+			}
+		}
+		printf("matched filter init!\n");
 
 		// raw data buffer for saving the data
 		daqData[devNo] = new lsampl_t[channels_in_use];
@@ -598,6 +612,7 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 
 					if(comediRecord->matchedFilterCheckbox->checkState()==Qt::Checked){
 						//To be implemented
+						value = filter(value, matchedbuffer[n][i], fir2_coefficients);
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))
