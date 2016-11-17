@@ -19,9 +19,9 @@
 
 #include "comediscope.h"
 
-enum {num_of_taps = 2000};
-double fir1_coefficients[2000];	//coefficients for 50hz notch and DC filter
-double fir2_coefficients[6000];	//coefficients for matched FIR filter
+enum {num_of_taps = 1000};
+double fir1_coefficients[1000];	//coefficients for 50hz notch and DC filter
+double fir2_coefficients[2800];	//coefficients for matched FIR filter
 
 void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	int taps = 0;
@@ -38,7 +38,7 @@ void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	rewind(f);
 
 	if (taps != num_of_taps){
-		printf("taps do not equal constant number of taps!");
+		printf("taps do not equal const number of taps!");
 	}
 
 	assert( coeffs != NULL );
@@ -273,8 +273,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		}
 
 		printf("Initialising FIR Filter\n");
-		initFIR(2000,fir1_coefficients,"notchcoeffs.dat");
-		initFIR(6000,fir2_coefficients,"matchedcoeffs.dat");
+		initFIR(1000,fir1_coefficients,"notchcoeffs.dat");
+		initFIR(2800,fir2_coefficients,"matchedcoeffs.dat");
 		printf("coefs initiated\n");
 		firbuffer = new float**[nComediDevices];
 		for(int devNo=0;devNo<nComediDevices;devNo++){
@@ -298,6 +298,15 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 					matchedbuffer[devNo][i][z] = 0.0;
 				}
 				assert(matchedbuffer[devNo][i] != NULL);
+			}
+		}
+
+		matchedcounter = new int*[nComediDevices];
+		for(int devNo=0;devNo<nComediDevices;devNo++){
+			matchedcounter[devNo] = new int[channels_in_use];
+			for(int i=0;i<channels_in_use;i++){
+				matchedcounter[devNo][i] = 0;
+				assert(matchedcounter[devNo][i] == 0);
 			}
 		}
 		printf("matched filter init!\n");
@@ -613,6 +622,15 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					if(comediRecord->matchedFilterCheckbox->checkState()==Qt::Checked){
 						//To be implemented
 						value = filter(value, matchedbuffer[n][i], fir2_coefficients);
+						value = value * value;
+						matchedcounter[n][i]+= 1;
+						if(value > 1.0 && matchedcounter[n][i] >= 1300){
+							int heartrate = matchedcounter[n][i]/100;
+							if(heartrate <150 && heartrate >25){
+								printf("Heart Beat! Heart rate is: %dbpm\n",heartrate);
+							}
+							matchedcounter[n][i] = 0;
+						}
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
 					    (comediRecord->fftscope))

@@ -242,6 +242,7 @@ public:
 
     float*** firbuffer;
     float*** matchedbuffer;
+    int** matchedcounter;
     /**
      * comma separated?
      **/
