@@ -56,21 +56,27 @@ void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	printf("Read in taps of size: %d\n", taps);
 }
 
-float filter(float input, float buffer[], double coefficients[],int size)
+float filter(float input, float buffer[], double coefficients[],int size, int start)
 {
 	//Simple FIR filter
 	if (buffer == NULL){
 		printf("buffer was null\n");
 	}
 	assert(buffer != NULL);
-	for (int i = size - 1; i > 0; i--){
-		buffer[i] = buffer[i-1];
+	//shift and add
+	start = start - 1;
+	if (start < 0 ){
+		start = size - 1;
 	}
-	//- insert desired value at desired position
-	buffer[0] = input;
+	buffer[start] = input;
   float sum = 0;
+	int place_helper = start;
 	for (int i = 0; i <size ; i++){
-		sum = sum + (buffer[i] * coefficients[i]);
+		place_helper = place_helper+ 1;
+		if (place_helper >= size){
+		  place_helper = 0;
+		}
+		sum = sum + (buffer[place_helper] * coefficients[i]);
 	}
 	return sum;
 }
@@ -308,6 +314,22 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 			for(int i=0;i<channels_in_use;i++){
 				matchedcounter[devNo][i] = 0;
 				assert(matchedcounter[devNo][i] == 0);
+			}
+		}
+
+		fir1_start = new int*[nComediDevices];
+		for(int devNo=0;devNo<nComediDevices;devNo++){
+			fir1_start[devNo] = new int[channels_in_use];
+			for(int i=0;i<channels_in_use;i++){
+				fir1_start[devNo][i] = num_of_taps - 1;
+			}
+		}
+
+		fir2_start = new int*[nComediDevices];
+		for(int devNo=0;devNo<nComediDevices;devNo++){
+			fir2_start[devNo] = new int[channels_in_use];
+			for(int i=0;i<channels_in_use;i++){
+				fir2_start[devNo][i] = matched_taps-1;
 			}
 		}
 		printf("matched filter init!\n");
@@ -616,13 +638,17 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					//use FIR filter to remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
 						//printf("Value going in: %f on channel %d on device %d \n",value, i, n);
-						value = filter(value, firbuffer[n][i], fir1_coefficients,num_of_taps);
+						value = filter(value, firbuffer[n][i], fir1_coefficients,num_of_taps, fir1_start[n][i]);
+						fir1_start[n][i] = fir1_start[n][i] - 1;
+						if (fir1_start[n][i] < 0){
+							fir1_start[n][i] = num_of_taps -1;
+						}
 						//printf("Value coming out: %f\n", value);
 					}
 
 					if(comediRecord->matchedFilterCheckbox->checkState()==Qt::Checked){
 						//To be implemented
-						value = filter(value, matchedbuffer[n][i], fir2_coefficients,matched_taps);
+						value = filter(value, matchedbuffer[n][i], fir2_coefficients,matched_taps, fir2_start[n][i]);
 						value = value * value;
 						matchedcounter[n][i]+= 1;
 						if(value > 1.0 && matchedcounter[n][i] >= 1600){
@@ -631,6 +657,10 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 								printf("Heart Beat! Heart rate is: %dbpm\n",heartrate);
 							}
 							matchedcounter[n][i] = 0;
+						}
+						fir2_start[n][i] = fir2_start[n][i] - 1;
+						if (fir2_start[n][i] < 0){
+							fir2_start[n][i] = matched_taps -1;
 						}
 					}
 					if ((n==fftdevno) && (ch==fftch) &&
