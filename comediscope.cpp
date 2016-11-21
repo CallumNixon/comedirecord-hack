@@ -19,9 +19,10 @@
 
 #include "comediscope.h"
 
-enum {num_of_taps = 1000};
-double fir1_coefficients[1000];	//coefficients for 50hz notch and DC filter
-double fir2_coefficients[2800];	//coefficients for matched FIR filter
+enum {num_of_taps = 2000};
+enum {matched_taps = 4100};
+double fir1_coefficients[num_of_taps];	//coefficients for 50hz notch and DC filter
+double fir2_coefficients[matched_taps];	//coefficients for matched FIR filter
 
 void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	int taps = 0;
@@ -55,20 +56,20 @@ void initFIR(int num_of_taps, double coeffs[], const char* filename){
 	printf("Read in taps of size: %d\n", taps);
 }
 
-float filter(float input, float buffer[], double coefficients[])
+float filter(float input, float buffer[], double coefficients[],int size)
 {
 	//Simple FIR filter
 	if (buffer == NULL){
 		printf("buffer was null\n");
 	}
 	assert(buffer != NULL);
-	for (int i = num_of_taps - 1; i > 0; i--){
+	for (int i = size - 1; i > 0; i--){
 		buffer[i] = buffer[i-1];
 	}
 	//- insert desired value at desired position
 	buffer[0] = input;
   float sum = 0;
-	for (int i = 0; i <1000 ; i++){
+	for (int i = 0; i <size ; i++){
 		sum = sum + (buffer[i] * coefficients[i]);
 	}
 	return sum;
@@ -273,8 +274,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		}
 
 		printf("Initialising FIR Filter\n");
-		initFIR(1000,fir1_coefficients,"notchcoeffs.dat");
-		initFIR(2800,fir2_coefficients,"matchedcoeffs.dat");
+		initFIR(num_of_taps,fir1_coefficients,"notchcoeffs.dat");
+		initFIR(matched_taps,fir2_coefficients,"matchedcoeffs2.dat");
 		printf("coefs initiated\n");
 		firbuffer = new float**[nComediDevices];
 		for(int devNo=0;devNo<nComediDevices;devNo++){
@@ -293,8 +294,8 @@ ComediScope::ComediScope( ComediRecord *comediRecordTmp,
 		for(int devNo=0;devNo<nComediDevices;devNo++){
 			matchedbuffer[devNo] = new float*[channels_in_use];
 			for(int i=0;i<channels_in_use;i++){
-				matchedbuffer[devNo][i] = new float[num_of_taps];
-				for (int z=0; z<num_of_taps; z++){
+				matchedbuffer[devNo][i] = new float[matched_taps];
+				for (int z=0; z<matched_taps; z++){
 					matchedbuffer[devNo][i][z] = 0.0;
 				}
 				assert(matchedbuffer[devNo][i] != NULL);
@@ -615,18 +616,18 @@ void ComediScope::paintEvent( QPaintEvent * ) {
 					//use FIR filter to remove 50Hz
 					if (comediRecord->filterCheckbox->checkState()==Qt::Checked) {
 						//printf("Value going in: %f on channel %d on device %d \n",value, i, n);
-						value = filter(value, firbuffer[n][i], fir1_coefficients);
+						value = filter(value, firbuffer[n][i], fir1_coefficients,num_of_taps);
 						//printf("Value coming out: %f\n", value);
 					}
 
 					if(comediRecord->matchedFilterCheckbox->checkState()==Qt::Checked){
 						//To be implemented
-						value = filter(value, matchedbuffer[n][i], fir2_coefficients);
+						value = filter(value, matchedbuffer[n][i], fir2_coefficients,matched_taps);
 						value = value * value;
 						matchedcounter[n][i]+= 1;
-						if(value > 1.0 && matchedcounter[n][i] >= 1300){
+						if(value > 1.0 && matchedcounter[n][i] >= 1600){
 							int heartrate = matchedcounter[n][i]/100;
-							if(heartrate <150 && heartrate >25){
+							if(heartrate <150 && heartrate >29){
 								printf("Heart Beat! Heart rate is: %dbpm\n",heartrate);
 							}
 							matchedcounter[n][i] = 0;
